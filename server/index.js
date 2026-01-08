@@ -22,10 +22,22 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Middleware
+// CORS - Allow all origins and credentials (needed for Chrome extension)
 app.use(cors({
-  origin: true, // Allow all origins
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, Chrome extensions)
+    if (!origin) return callback(null, true);
+    // Allow all origins
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 app.use(express.json());
 
@@ -33,11 +45,13 @@ app.use(session({
   secret: config.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
+  proxy: process.env.NODE_ENV === 'production', // Trust proxy in production
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS in production
-    httpOnly: true,
+    httpOnly: false, // Allow JavaScript access for extension
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
   }
 }));
 

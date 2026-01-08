@@ -55,8 +55,15 @@ async function login(apiUrl, username, password) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      mode: 'cors',
       body: JSON.stringify({ username, password })
     });
+    
+    // Check content type before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return { error: 'Server returned non-JSON response. Check API URL in settings.' };
+    }
     
     const data = await response.json();
     
@@ -68,7 +75,7 @@ async function login(apiUrl, username, password) {
     await chrome.storage.local.set({ user: data });
     return { user: data };
   } catch (error) {
-    return { error: error.message };
+    return { error: `Connection failed: ${error.message}. Check your API URL in settings.` };
   }
 }
 
@@ -89,10 +96,17 @@ async function logout(apiUrl) {
 async function checkAuth(apiUrl) {
   try {
     const response = await fetch(`${apiUrl}/api/auth/me`, {
-      credentials: 'include'
+      credentials: 'include',
+      mode: 'cors'
     });
     
     if (!response.ok) {
+      await chrome.storage.local.remove(['user']);
+      return { user: null };
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
       await chrome.storage.local.remove(['user']);
       return { user: null };
     }
@@ -109,10 +123,16 @@ async function getTags(apiUrl, search) {
   try {
     const query = search ? `?search=${encodeURIComponent(search)}` : '';
     const response = await fetch(`${apiUrl}/api/tags${query}`, {
-      credentials: 'include'
+      credentials: 'include',
+      mode: 'cors'
     });
     
     if (!response.ok) {
+      return { tags: [] };
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
       return { tags: [] };
     }
     
@@ -129,8 +149,14 @@ async function createRecommendation(apiUrl, data) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      mode: 'cors',
       body: JSON.stringify(data)
     });
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return { error: 'Server returned invalid response' };
+    }
     
     const result = await response.json();
     
@@ -147,10 +173,16 @@ async function createRecommendation(apiUrl, data) {
 async function fetchTitle(apiUrl, url) {
   try {
     const response = await fetch(`${apiUrl}/api/recommendations/fetch-title?url=${encodeURIComponent(url)}`, {
-      credentials: 'include'
+      credentials: 'include',
+      mode: 'cors'
     });
     
     if (!response.ok) {
+      return { title: '' };
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
       return { title: '' };
     }
     
