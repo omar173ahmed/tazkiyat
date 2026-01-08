@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - تزكيات</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <a href="/" class="logo logo-arabic">تزكيات</a>
+      <nav class="nav">
+        <!-- Populated by JS -->
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-title">
+      <h1>Admin Panel</h1>
+      <p>Manage invites and users</p>
+    </div>
+
+    <!-- Generate Invites -->
+    <div class="admin-section">
+      <h2>Generate Invite Codes</h2>
+      <form id="generate-form" style="display: flex; gap: 10px; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label for="invite-count">Number of codes</label>
+          <select id="invite-count" class="form-control" style="width: auto;">
+            <option value="1">1</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Generate</button>
+      </form>
+      
+      <div id="new-codes" class="invite-codes" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- Active Invite Codes -->
+    <div class="admin-section">
+      <h2>Invite Codes</h2>
+      <div id="invites-list">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="admin-section">
+      <h2>Registered Users</h2>
+      <div id="users-list">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    let currentUser = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+      
+      // Check admin access
+      if (!currentUser.isAdmin) {
+        window.location.href = '/';
+        return;
+      }
+      
+      setupHeader(currentUser);
+      loadInvites();
+      loadUsers();
+      
+      // Generate form
+      document.getElementById('generate-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const count = parseInt(document.getElementById('invite-count').value);
+        await generateInvites(count);
+      });
+    });
+
+    async function generateInvites(count) {
+      try {
+        const result = await api.createInvites(count);
+        
+        // Display new codes prominently
+        const container = document.getElementById('new-codes');
+        container.innerHTML = `
+          <p style="color: var(--success); margin-bottom: 10px;">Generated ${result.codes.length} new code(s):</p>
+          ${result.codes.map(code => `
+            <div class="invite-code">
+              <span>${code}</span>
+              <button class="btn-icon" onclick="copyCode('${code}')" title="Copy">📋</button>
+            </div>
+          `).join('')}
+        `;
+        
+        // Refresh list
+        loadInvites();
+      } catch (error) {
+        alert('Failed to generate invites: ' + error.message);
+      }
+    }
+
+    function copyCode(code) {
+      navigator.clipboard.writeText(code).then(() => {
+        alert('Copied: ' + code);
+      });
+    }
+
+    async function loadInvites() {
+      const container = document.getElementById('invites-list');
+      
+      try {
+        const invites = await api.getInvites();
+        
+        if (invites.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-muted);">No invite codes yet</p>';
+          return;
+        }
+        
+        // Separate unused and used
+        const unused = invites.filter(i => !i.used_by_nickname);
+        const used = invites.filter(i => i.used_by_nickname);
+        
+        let html = '';
+        
+        if (unused.length > 0) {
+          html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Available</h4>';
+          html += '<div class="invite-codes">';
+          html += unused.map(invite => `
+            <div class="invite-code">
+              <span>${invite.code}</span>
+              <button class="btn-icon" onclick="copyCode('${invite.code}')" title="Copy">📋</button>
+              <button class="btn-icon" onclick="deleteInvite('${invite.code}')" title="Delete" style="color: var(--error);">✕</button>
+            </div>
+          `).join('');
+          html += '</div>';
+        }
+        
+        if (used.length > 0) {
+          html += '<h4 style="color: var(--text-secondary); margin: 20px 0 10px;">Used</h4>';
+          html += '<div class="invite-codes">';
+          html += used.map(invite => `
+            <div class="invite-code used">
+              <span>${invite.code}</span>
+              <span style="font-family: inherit; color: var(--text-muted);">→ ${escapeHtml(invite.used_by_nickname)}</span>
+            </div>
+          `).join('');
+          html += '</div>';
+        }
+        
+        container.innerHTML = html;
+      } catch (error) {
+        container.innerHTML = '<p style="color: var(--error);">Failed to load invites</p>';
+      }
+    }
+
+    async function deleteInvite(code) {
+      if (!confirm(`Delete invite code ${code}?`)) return;
+      
+      try {
+        await api.deleteInvite(code);
+        loadInvites();
+      } catch (error) {
+        alert('Failed to delete: ' + error.message);
+      }
+    }
+
+    async function loadUsers() {
+      const container = document.getElementById('users-list');
+      
+      try {
+        const users = await api.getUsers();
+        
+        if (users.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-muted);">No users yet</p>';
+          return;
+        }
+        
+        container.innerHTML = '<div class="user-list">' + users.map(user => `
+          <div class="user-item">
+            <div class="user-info">
+              <span class="user-name">
+                ${escapeHtml(user.nickname)}
+                ${user.isAdmin ? '<span class="user-badge">Admin</span>' : ''}
+              </span>
+              <span class="user-username">@${escapeHtml(user.username)} · ${user.recommendation_count} recs · joined ${formatDate(user.created_at)}</span>
+            </div>
+            ${!user.isAdmin && user.id !== currentUser.id ? `
+              <button class="btn btn-small btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.nickname)}')">
+                Remove
+              </button>
+            ` : ''}
+          </div>
+        `).join('') + '</div>';
+      } catch (error) {
+        container.innerHTML = '<p style="color: var(--error);">Failed to load users</p>';
+      }
+    }
+
+    async function deleteUser(userId, nickname) {
+      if (!confirm(`Remove user "${nickname}"? This will delete all their recommendations and comments.`)) return;
+      
+      try {
+        await api.deleteUser(userId);
+        loadUsers();
+      } catch (error) {
+        alert('Failed to remove user: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

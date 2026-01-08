@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تزكيات</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="logo">تزكيات</h1>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+    </header>
+
+    <!-- Loading State -->
+    <div id="loading" class="view">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <!-- Login View -->
+    <div id="login-view" class="view hidden">
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="Enter username" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Sign In</button>
+      </form>
+      <p class="hint">Don't have an account? Ask your admin for an invite code.</p>
+    </div>
+
+    <!-- Submit View -->
+    <div id="submit-view" class="view hidden">
+      <div class="user-bar">
+        <span>Logged in as <strong id="user-nickname"></strong></span>
+        <button id="logout-btn" class="btn btn-small">Logout</button>
+      </div>
+
+      <form id="submit-form">
+        <div class="form-group">
+          <label for="url">URL</label>
+          <input type="url" id="url" readonly>
+        </div>
+        
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input type="text" id="title" placeholder="Page title" required>
+          <button type="button" id="fetch-title-btn" class="btn btn-small">Auto-fetch</button>
+        </div>
+        
+        <div class="form-group">
+          <label for="comment">Comment (optional)</label>
+          <textarea id="comment" placeholder="Why do you recommend this?" rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="tags-input">Tags</label>
+          <div class="tags-container">
+            <div id="selected-tags" class="selected-tags"></div>
+            <input type="text" id="tags-input" placeholder="Type to add tags...">
+          </div>
+          <div id="tags-suggestions" class="tags-suggestions hidden"></div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Share Recommendation</button>
+      </form>
+    </div>
+
+    <!-- Success View -->
+    <div id="success-view" class="view hidden">
+      <div class="success-icon">✓</div>
+      <h2>Shared!</h2>
+      <p>Your recommendation has been added to the feed.</p>
+      <button id="share-another-btn" class="btn btn-secondary">Share Another</button>
+    </div>
+
+    <!-- Settings View -->
+    <div id="settings-view" class="view hidden">
+      <h2>Settings</h2>
+      <form id="settings-form">
+        <div class="form-group">
+          <label for="api-url">Server URL</label>
+          <input type="url" id="api-url" placeholder="http://localhost:3000">
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" id="settings-cancel-btn" class="btn btn-secondary">Cancel</button>
+      </form>
+    </div>
+
+    <!-- Error Message -->
+    <div id="error-message" class="error hidden"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

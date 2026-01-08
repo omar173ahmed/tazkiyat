@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - تزكيات</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-title">
+        <h1 class="logo-arabic">تزكيات</h1>
+        <p>Create your account</p>
+      </div>
+      
+      <form id="register-form">
+        <div class="form-group">
+          <label for="invite-code">Invite Code</label>
+          <input type="text" id="invite-code" class="form-control" placeholder="Enter invite code" required autofocus>
+        </div>
+        
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" class="form-control" placeholder="Choose a username (3-30 chars)" required minlength="3" maxlength="30">
+        </div>
+        
+        <div class="form-group">
+          <label for="nickname">Nickname (Display Name)</label>
+          <input type="text" id="nickname" class="form-control" placeholder="Your display name" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Choose a password (min 6 chars)" required minlength="6">
+        </div>
+        
+        <div class="form-group">
+          <label for="confirm-password">Confirm Password</label>
+          <input type="password" id="confirm-password" class="form-control" placeholder="Confirm your password" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+      </form>
+      
+      <div class="auth-footer">
+        Already have an account? <a href="/login.html">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    // Redirect if already logged in
+    redirectIfAuth();
+    
+    // Check for invite code in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteFromUrl = urlParams.get('code');
+    if (inviteFromUrl) {
+      document.getElementById('invite-code').value = inviteFromUrl;
+    }
+    
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const form = e.target;
+      const inviteCode = document.getElementById('invite-code').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const nickname = document.getElementById('nickname').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      
+      // Validate
+      if (password !== confirmPassword) {
+        showAlert(form, 'Passwords do not match');
+        return;
+      }
+      
+      try {
+        await api.register(inviteCode, username, nickname, password);
+        window.location.href = '/';
+      } catch (error) {
+        showAlert(form, error.message);
+      }
+    });
+  </script>
+</body>
+</html>

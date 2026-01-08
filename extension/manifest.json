@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "تزكيات - Tazkiyat",
+  "description": "Share recommendations with your friends",
+  "version": "1.0.0",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://*.railway.app/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Share with تزكيات"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
