@@ -340,3 +340,14 @@ textarea {
 #settings-view .btn {
   margin-top: 5px;
 }
+
+
+/* Version Footer */
+.version {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding: 10px 0 0;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
