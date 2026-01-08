@@ -1,7 +1,7 @@
 // تزكيات (Tazkiyat) - Background Service Worker
 
 // Default API URL (can be changed in popup settings)
-const DEFAULT_API_URL = 'http://localhost:3000';
+const DEFAULT_API_URL = 'https://tazkiyat-production.up.railway.app';
 
 // Get API URL from storage
 async function getApiUrl() {
