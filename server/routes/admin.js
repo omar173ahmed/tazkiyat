@@ -139,11 +139,24 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
       return res.status(400).json({ error: 'Cannot delete admin users' });
     }
     
-    // Delete user's data
+    // Delete user's data (order matters due to foreign key constraints)
+    // 1. Delete invite codes where user was the registrant
+    await run('DELETE FROM invite_codes WHERE used_by = ?', [userId]);
+    // 2. Delete invite codes created by this user
+    await run('DELETE FROM invite_codes WHERE created_by = ?', [userId]);
+    // 3. Delete recommendation_tags for tags created by this user (before deleting tags)
+    await run('DELETE FROM recommendation_tags WHERE tag_id IN (SELECT id FROM tags WHERE created_by = ?)', [userId]);
+    // 4. Delete tags created by this user
+    await run('DELETE FROM tags WHERE created_by = ?', [userId]);
+    // 5. Delete comments by this user
     await run('DELETE FROM comments WHERE user_id = ?', [userId]);
+    // 6. Delete upvotes by this user
     await run('DELETE FROM upvotes WHERE user_id = ?', [userId]);
+    // 7. Delete recommendation_tags for user's recommendations
     await run('DELETE FROM recommendation_tags WHERE recommendation_id IN (SELECT id FROM recommendations WHERE user_id = ?)', [userId]);
+    // 8. Delete recommendations by this user
     await run('DELETE FROM recommendations WHERE user_id = ?', [userId]);
+    // 9. Finally, delete the user
     await run('DELETE FROM users WHERE id = ?', [userId]);
     
     res.json({ message: 'User deleted' });

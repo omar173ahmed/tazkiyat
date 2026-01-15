@@ -170,13 +170,13 @@ function renderRecommendationCard(rec) {
       <div class="rec-header">
         <div>
           <div class="rec-title">
-            <a href="${escapeHtml(rec.url)}" target="_blank" rel="noopener">${escapeHtml(rec.title)}</a>
+            <a href="${escapeHtml(rec.url)}" target="_blank" rel="noopener" dir="auto">${escapeHtml(rec.title)}</a>
           </div>
           <div class="rec-url">${escapeHtml(domain)}</div>
         </div>
       </div>
       
-      ${rec.comment ? `<div class="rec-comment">${escapeHtml(rec.comment)}</div>` : ''}
+      ${rec.comment ? `<div class="rec-comment" dir="auto">${escapeHtml(rec.comment)}</div>` : ''}
       
       ${tagsHtml ? `<div class="rec-tags">${tagsHtml}</div>` : ''}
       
@@ -271,7 +271,7 @@ async function loadComments(recId) {
           <span class="comment-author">${escapeHtml(c.user_nickname)}</span>
           <span class="comment-date">${formatDate(c.created_at)}</span>
         </div>
-        <div class="comment-content">${escapeHtml(c.content)}</div>
+        <div class="comment-content" dir="auto">${escapeHtml(c.content)}</div>
         ${c.user_id === currentUser.id || currentUser.isAdmin ? `
           <button class="btn-icon" onclick="deleteComment(${c.id}, ${recId})" style="font-size: 0.75rem; color: var(--error);">Delete</button>
         ` : ''}

@@ -517,6 +517,16 @@ textarea.form-control {
   color: var(--text-secondary);
 }
 
+/* Bidirectional text support for Arabic/English mixed content */
+.rec-title,
+.rec-title a,
+.rec-comment,
+.comment-content,
+.tag {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
 .comment-form {
   display: flex;
   gap: 10px;

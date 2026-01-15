@@ -33,25 +33,43 @@ router.post('/:recommendationId', requireAuth, async (req, res) => {
   try {
     const { recommendationId } = req.params;
     const { content } = req.body;
-    
+
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Comment content required' });
     }
-    
+
     // Check recommendation exists
     const recommendation = await get('SELECT id FROM recommendations WHERE id = ?', [recommendationId]);
-    
+
     if (!recommendation) {
       return res.status(404).json({ error: 'Recommendation not found' });
     }
-    
-    await run(
-      'INSERT INTO comments (recommendation_id, user_id, content) VALUES (?, ?, ?)',
-      [recommendationId, req.session.userId, content.trim()]
-    );
-    
+
+    const { isPostgres, getDb } = require('../database');
+    let commentId;
+
+    if (isPostgres) {
+      // Use RETURNING clause for PostgreSQL
+      const pgPool = getDb();
+      const result = await pgPool.query(
+        'INSERT INTO comments (recommendation_id, user_id, content) VALUES ($1, $2, $3) RETURNING id',
+        [recommendationId, req.session.userId, content.trim()]
+      );
+      commentId = result.rows[0].id;
+    } else {
+      // For SQLite, insert then get last_insert_rowid
+      await run(
+        'INSERT INTO comments (recommendation_id, user_id, content) VALUES (?, ?, ?)',
+        [recommendationId, req.session.userId, content.trim()]
+      );
+      const db = getDb();
+      const result = db.exec('SELECT last_insert_rowid() as id')[0];
+      commentId = result.values[0][0];
+    }
+
+    // Fetch the complete comment with user info
     const comment = await get(`
-      SELECT 
+      SELECT
         c.id,
         c.content,
         c.created_at,
@@ -59,14 +77,13 @@ router.post('/:recommendationId', requireAuth, async (req, res) => {
         u.nickname as user_nickname
       FROM comments c
       JOIN users u ON c.user_id = u.id
-      WHERE c.recommendation_id = ? AND c.user_id = ?
-      ORDER BY c.id DESC
-      LIMIT 1
-    `, [recommendationId, req.session.userId]);
-    
+      WHERE c.id = ?
+    `, [commentId]);
+
     res.status(201).json(comment);
   } catch (error) {
     console.error('Create comment error:', error);
+    console.error('Error details:', error.message, error.stack);
     res.status(500).json({ error: 'Server error' });
   }
 });
