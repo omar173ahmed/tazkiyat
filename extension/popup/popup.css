@@ -48,6 +48,11 @@ body {
   font-weight: 700;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 5px;
+}
+
 .icon-btn {
   background: none;
   border: none;
@@ -73,11 +78,18 @@ body {
 
 /* Loading */
 #loading {
-  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
+}
+
+#loading:not(.hidden) {
+  display: flex;
+}
+
+#loading.hidden {
+  display: none;
 }
 
 .spinner {
