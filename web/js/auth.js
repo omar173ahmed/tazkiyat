@@ -17,6 +17,13 @@ async function requireAuth() {
     window.location.href = '/login.html';
     return null;
   }
+
+  // Check if user needs to set security question (except on the setup page itself)
+  if (user.needsSecurityQuestion && !window.location.pathname.includes('set-security-question')) {
+    window.location.href = '/set-security-question.html';
+    return null;
+  }
+
   return user;
 }
 

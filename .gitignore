@@ -25,3 +25,9 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Claude Code
+.claude/
+
+# Windows artifacts
+nul

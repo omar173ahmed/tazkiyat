@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const router = express.Router();
 const { run, get, all } = require('../database');
 const { requireAdmin } = require('../middleware/auth');
@@ -13,6 +14,16 @@ function generateInviteCode() {
 function checkIsAdmin(user) {
   if (!user) return false;
   return user.is_admin === true || user.is_admin === 1;
+}
+
+// Generate random alphanumeric password
+function generateTempPassword(length = 10) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 }
 
 // POST /api/admin/invites - Create invite code(s)
@@ -124,21 +135,21 @@ router.get('/users', requireAdmin, async (req, res) => {
 router.delete('/users/:id', requireAdmin, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    
+
     if (userId === req.session.userId) {
       return res.status(400).json({ error: 'Cannot delete yourself' });
     }
-    
+
     const user = await get('SELECT * FROM users WHERE id = ?', [userId]);
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
     if (checkIsAdmin(user)) {
       return res.status(400).json({ error: 'Cannot delete admin users' });
     }
-    
+
     // Delete user's data (order matters due to foreign key constraints)
     // 1. Delete invite codes where user was the registrant
     await run('DELETE FROM invite_codes WHERE used_by = ?', [userId]);
@@ -158,10 +169,53 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
     await run('DELETE FROM recommendations WHERE user_id = ?', [userId]);
     // 9. Finally, delete the user
     await run('DELETE FROM users WHERE id = ?', [userId]);
-    
+
     res.json({ message: 'User deleted' });
   } catch (error) {
     console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/admin/users/:id/reset-password - Reset user password
+router.post('/users/:id/reset-password', requireAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    // Cannot reset own password via this endpoint
+    if (userId === req.session.userId) {
+      return res.status(400).json({ error: 'Cannot reset your own password via admin panel' });
+    }
+
+    const user = await get('SELECT * FROM users WHERE id = ?', [userId]);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Cannot reset admin passwords
+    if (checkIsAdmin(user)) {
+      return res.status(400).json({ error: 'Cannot reset admin passwords' });
+    }
+
+    // Generate temporary password
+    const tempPassword = generateTempPassword(10);
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    // Update user's password
+    await run('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, userId]);
+
+    // Log the action (server-side only)
+    console.log(`[${new Date().toISOString()}] Password reset: Admin "${req.session.nickname}" reset password for user "${user.nickname}" (ID: ${userId})`);
+
+    res.json({
+      message: 'Password reset successfully',
+      tempPassword: tempPassword,
+      username: user.username,
+      nickname: user.nickname
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

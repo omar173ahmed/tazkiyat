@@ -58,6 +58,20 @@
     </div>
   </main>
 
+  <!-- Password Reset Modal -->
+  <div id="password-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="modal-title">Temporary Password</h3>
+      <p id="modal-message"></p>
+      <div class="temp-password-box">
+        <code id="temp-password"></code>
+        <button class="btn-icon" onclick="copyTempPassword()" title="Copy">📋</button>
+      </div>
+      <p class="modal-warning">This password will only be shown once. Share it securely with the user.</p>
+      <button class="btn btn-primary" onclick="closePasswordModal()">Close</button>
+    </div>
+  </div>
+
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script>
@@ -194,9 +208,14 @@
               <span class="user-username">@${escapeHtml(user.username)} · ${user.recommendation_count} recs · joined ${formatDate(user.created_at)}</span>
             </div>
             ${!user.isAdmin && user.id !== currentUser.id ? `
-              <button class="btn btn-small btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.nickname)}')">
-                Remove
-              </button>
+              <div class="user-actions">
+                <button class="btn btn-small btn-secondary" onclick="resetUserPassword(${user.id}, '${escapeHtml(user.nickname)}', '${escapeHtml(user.username)}')">
+                  Reset Password
+                </button>
+                <button class="btn btn-small btn-danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.nickname)}')">
+                  Remove
+                </button>
+              </div>
             ` : ''}
           </div>
         `).join('') + '</div>';
@@ -207,13 +226,45 @@
 
     async function deleteUser(userId, nickname) {
       if (!confirm(`Remove user "${nickname}"? This will delete all their recommendations and comments.`)) return;
-      
+
       try {
         await api.deleteUser(userId);
         loadUsers();
       } catch (error) {
         alert('Failed to remove user: ' + error.message);
       }
+    }
+
+    async function resetUserPassword(userId, nickname, username) {
+      if (!confirm(`Reset password for "${nickname}" (@${username})?\n\nA new temporary password will be generated.`)) {
+        return;
+      }
+
+      try {
+        const result = await api.resetUserPassword(userId);
+        showPasswordModal(result.nickname, result.username, result.tempPassword);
+      } catch (error) {
+        alert('Failed to reset password: ' + error.message);
+      }
+    }
+
+    function showPasswordModal(nickname, username, tempPassword) {
+      document.getElementById('modal-message').textContent =
+        `Password reset for ${nickname} (@${username}). Please share this temporary password with the user:`;
+      document.getElementById('temp-password').textContent = tempPassword;
+      document.getElementById('password-modal').classList.remove('hidden');
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password-modal').classList.add('hidden');
+      document.getElementById('temp-password').textContent = '';
+    }
+
+    function copyTempPassword() {
+      const password = document.getElementById('temp-password').textContent;
+      navigator.clipboard.writeText(password).then(() => {
+        alert('Password copied to clipboard!');
+      });
     }
   </script>
 </body>

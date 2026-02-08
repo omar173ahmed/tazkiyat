@@ -13,10 +13,11 @@ async function initDatabase() {
   } else {
     await initSQLite();
   }
-  
+
   await createTables();
+  await migrateSecurityQuestions();
   await createDefaultAdmin();
-  
+
   return db || pgPool;
 }
 
@@ -212,6 +213,79 @@ async function createTables() {
     
     saveDatabase();
   }
+}
+
+// Migrate security questions
+async function migrateSecurityQuestions() {
+  const questions = [
+    'What is the name of your first pet?',
+    'What city were you born in?',
+    'What is your favorite book?',
+    'What was the name of your first school?',
+    'What is your mother\'s maiden name?',
+    'What was your childhood nickname?'
+  ];
+
+  if (isPostgres) {
+    // Create security_questions table
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS security_questions (
+        id SERIAL PRIMARY KEY,
+        question_text VARCHAR(255) NOT NULL
+      )
+    `);
+
+    // Seed questions
+    for (const q of questions) {
+      await pgPool.query(
+        'INSERT INTO security_questions (question_text) VALUES ($1) ON CONFLICT DO NOTHING',
+        [q]
+      );
+    }
+
+    // Add columns to users if they don't exist
+    await pgPool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS security_question_id INTEGER REFERENCES security_questions(id),
+      ADD COLUMN IF NOT EXISTS security_answer_hash VARCHAR(255)
+    `);
+  } else {
+    // SQLite version
+    // Create security_questions table
+    db.run(`
+      CREATE TABLE IF NOT EXISTS security_questions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question_text TEXT NOT NULL
+      )
+    `);
+
+    // Seed questions
+    for (const q of questions) {
+      const stmt = db.prepare('SELECT id FROM security_questions WHERE question_text = ?');
+      stmt.bind([q]);
+      const exists = stmt.step();
+      stmt.free();
+
+      if (!exists) {
+        db.run('INSERT INTO security_questions (question_text) VALUES (?)', [q]);
+      }
+    }
+
+    // Check if columns exist and add if not
+    const tableInfo = db.exec('PRAGMA table_info(users)')[0];
+    const columnNames = tableInfo ? tableInfo.values.map(row => row[1]) : [];
+
+    if (!columnNames.includes('security_question_id')) {
+      db.run('ALTER TABLE users ADD COLUMN security_question_id INTEGER');
+    }
+    if (!columnNames.includes('security_answer_hash')) {
+      db.run('ALTER TABLE users ADD COLUMN security_answer_hash TEXT');
+    }
+
+    saveDatabase();
+  }
+
+  console.log('Security questions migration complete.');
 }
 
 // Create default admin

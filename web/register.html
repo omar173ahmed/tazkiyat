@@ -39,7 +39,21 @@
           <label for="confirm-password">Confirm Password</label>
           <input type="password" id="confirm-password" class="form-control" placeholder="Confirm your password" required>
         </div>
-        
+
+        <div class="form-group">
+          <label for="security-question">Security Question</label>
+          <select id="security-question" class="form-control" required>
+            <option value="">-- Select a security question --</option>
+            <!-- Options populated via JavaScript -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="security-answer">Security Answer</label>
+          <input type="text" id="security-answer" class="form-control" placeholder="Your answer (min 2 chars)" required minlength="2">
+          <small style="color: var(--text-muted); font-size: 0.8rem;">This will be used to reset your password if you forget it</small>
+        </div>
+
         <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
       </form>
       
@@ -54,32 +68,84 @@
   <script>
     // Redirect if already logged in
     redirectIfAuth();
-    
+
     // Check for invite code in URL
     const urlParams = new URLSearchParams(window.location.search);
     const inviteFromUrl = urlParams.get('code');
     if (inviteFromUrl) {
       document.getElementById('invite-code').value = inviteFromUrl;
     }
-    
+
+    // Load security questions on page load
+    async function loadSecurityQuestions() {
+      try {
+        const response = await fetch('/api/auth/security-questions');
+        const questions = await response.json();
+
+        const select = document.getElementById('security-question');
+        questions.forEach(q => {
+          const option = document.createElement('option');
+          option.value = q.id;
+          option.textContent = q.question_text;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load security questions:', error);
+      }
+    }
+
+    loadSecurityQuestions();
+
     document.getElementById('register-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const form = e.target;
       const inviteCode = document.getElementById('invite-code').value.trim();
       const username = document.getElementById('username').value.trim();
       const nickname = document.getElementById('nickname').value.trim();
       const password = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
-      
+      const securityQuestionId = document.getElementById('security-question').value;
+      const securityAnswer = document.getElementById('security-answer').value;
+
       // Validate
       if (password !== confirmPassword) {
         showAlert(form, 'Passwords do not match');
         return;
       }
-      
+
+      if (!securityQuestionId) {
+        showAlert(form, 'Please select a security question');
+        return;
+      }
+
+      if (securityAnswer.trim().length < 2) {
+        showAlert(form, 'Security answer must be at least 2 characters');
+        return;
+      }
+
       try {
-        await api.register(inviteCode, username, nickname, password);
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            inviteCode,
+            username,
+            nickname,
+            password,
+            securityQuestionId: parseInt(securityQuestionId),
+            securityAnswer
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showAlert(form, data.error || 'Registration failed');
+          return;
+        }
+
         window.location.href = '/';
       } catch (error) {
         showAlert(form, error.message);

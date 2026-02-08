@@ -159,6 +159,36 @@ class API {
   async deleteUser(id) {
     return this.request(`/admin/users/${id}`, { method: 'DELETE' });
   }
+
+  async resetUserPassword(id) {
+    return this.request(`/admin/users/${id}/reset-password`, { method: 'POST' });
+  }
+
+  // Security Questions
+  async getSecurityQuestions() {
+    return this.request('/auth/security-questions');
+  }
+
+  async getSecurityQuestion(username) {
+    return this.request(`/auth/forgot-password/${encodeURIComponent(username)}`);
+  }
+
+  async resetPassword(username, securityAnswer, newPassword) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: { username, securityAnswer, newPassword }
+    });
+  }
+
+  async setSecurityQuestion(securityQuestionId, securityAnswer, currentPassword = null) {
+    const body = { securityQuestionId, securityAnswer };
+    if (currentPassword) body.currentPassword = currentPassword;
+
+    return this.request('/auth/security-question', {
+      method: 'PUT',
+      body
+    });
+  }
 }
 
 // Global API instance

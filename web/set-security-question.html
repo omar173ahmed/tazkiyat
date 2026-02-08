@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set Security Question - تزكيات</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-title">
+        <h1 class="logo-arabic">تزكيات</h1>
+        <p>Set up account recovery</p>
+      </div>
+
+      <div class="alert alert-success" style="margin-bottom: 20px;">
+        Please set a security question to enable password recovery for your account.
+      </div>
+
+      <form id="security-form">
+        <div class="form-group">
+          <label for="security-question">Security Question</label>
+          <select id="security-question" class="form-control" required>
+            <option value="">-- Select a security question --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="security-answer">Security Answer</label>
+          <input type="text" id="security-answer" class="form-control" placeholder="Your answer (min 2 chars)" required minlength="2">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Security Question</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    let currentUser = null;
+
+    // Check auth and load questions
+    async function init() {
+      currentUser = await requireAuth();
+      if (!currentUser) return;
+
+      // If user already has security question, redirect to home
+      if (!currentUser.needsSecurityQuestion) {
+        window.location.href = '/';
+        return;
+      }
+
+      // Load security questions
+      try {
+        const response = await fetch('/api/auth/security-questions');
+        const questions = await response.json();
+
+        const select = document.getElementById('security-question');
+        questions.forEach(q => {
+          const option = document.createElement('option');
+          option.value = q.id;
+          option.textContent = q.question_text;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Failed to load security questions:', error);
+      }
+    }
+
+    init();
+
+    document.getElementById('security-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const form = e.target;
+      const securityQuestionId = document.getElementById('security-question').value;
+      const securityAnswer = document.getElementById('security-answer').value;
+
+      if (!securityQuestionId) {
+        showAlert(form, 'Please select a security question');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/security-question', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            securityQuestionId: parseInt(securityQuestionId),
+            securityAnswer
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showAlert(form, data.error || 'Failed to save');
+          return;
+        }
+
+        window.location.href = '/';
+      } catch (error) {
+        showAlert(form, 'Network error. Please try again.');
+      }
+    });
+  </script>
+</body>
+</html>
