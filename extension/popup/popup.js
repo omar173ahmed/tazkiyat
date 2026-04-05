@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Setup event listeners
 function setupEventListeners() {
+  // Popout button
+  document.getElementById('popout-btn').addEventListener('click', handlePopout);
+  
   // Settings button
   document.getElementById('settings-btn').addEventListener('click', showSettings);
   
@@ -76,15 +79,20 @@ function hideError() {
 async function checkAuth() {
   showView('loading');
   
-  const result = await chrome.runtime.sendMessage({ action: 'checkAuth' });
-  
-  if (result.user) {
-    currentUser = result.user;
-    document.getElementById('user-nickname').textContent = currentUser.nickname;
-    showView('submit');
-    loadCurrentTab();
-    loadTags();
-  } else {
+  try {
+    const result = await chrome.runtime.sendMessage({ action: 'checkAuth' });
+    
+    if (result && result.user) {
+      currentUser = result.user;
+      document.getElementById('user-nickname').textContent = currentUser.nickname;
+      showView('submit');
+      loadCurrentTab();
+      loadTags();
+    } else {
+      showView('login');
+    }
+  } catch (error) {
+    console.error('Auth check failed:', error);
     showView('login');
   }
 }
@@ -292,6 +300,18 @@ async function handleSubmit(e) {
   
   // Success!
   showView('success');
+}
+
+// Handle popout - open popup in a new window
+function handlePopout() {
+  const popupUrl = chrome.runtime.getURL('popup/popup.html');
+  chrome.windows.create({
+    url: popupUrl,
+    type: 'popup',
+    width: 400,
+    height: 600
+  });
+  window.close();
 }
 
 // Show settings
